@@ -73,6 +73,7 @@ do
     fi
 done
 
+read
 docker kill grafana-acc
 docker rm grafana-acc
 

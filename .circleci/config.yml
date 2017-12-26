@@ -6,7 +6,7 @@ jobs:
       - checkout
       - run:
           name: unit tests
-          command: docker run -w $PWD -v $PWD:$PWD --entrypoint sh sparkprime/jsonnet tests.sh
+          command: docker run -e RUN_DOCKER_ACCEPTANCE_TESTS=1 -w $PWD -v $PWD:$PWD --entrypoint sh sparkprime/jsonnet tests.sh
       - run:
           name: docs
           command: docker run --rm -u $UID -it -p 8000:8000 -v $PWD:/docs squidfunk/mkdocs-material build
