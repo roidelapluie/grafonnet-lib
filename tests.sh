@@ -39,4 +39,41 @@ do
         x=1
     fi
 done
+
+if [[ -z RUN_DOCKER_ACCEPTANCE_TESTS ]]
+then
+    exit $x
+fi
+
+# Isolate compiled examples to test them in grafana
+
+cp examples/*_compiled.json tests/acceptance/dashboards
+# Launch a grafana instance
+
+docker run -d -p 3000:3000 --name grafana-acc -v $PWD/tests/acceptance:/provisioning -e GF_AUTH_ANONYMOUS_ENABLED=true -e GF_PATHS_PROVISIONING=/provisioning grafana/grafana:master
+
+# Wait for grafana to be up
+until curl 127.0.0.1:3000; do sleep 1; done
+sleep 1
+
+# test the dashboards
+for d in tests/acceptance/dashboards/*.json
+do
+    slug=$(basename $d|cut -d _ -f 1)
+    t="Testing $slug"
+    curl http://127.0.0.1:3000/api/dashboards/db/$slug |jsonnet fmt -|jsonnet - > $d.GET
+    (cat $d.GET; echo " + {meta:[], dashboard+: {version:1,id:null}}")|jsonnet fmt - |jsonnet - > $d.processed
+    (echo "{dashboard:"; cat $d; echo " + {version:1,id:null}} + {meta:[]}")|jsonnet fmt - |jsonnet - > $d.pretty
+    if diff -urt $d.pretty $d.processed
+    then
+        echo $t OK
+    else
+        echo $t OK
+        x=1
+    fi
+done
+
+docker kill grafana-acc
+docker rm grafana-acc
+
 exit $x
